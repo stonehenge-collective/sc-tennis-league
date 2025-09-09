@@ -29,15 +29,13 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Generate singles ranking
+      - name: Generate ranking data
         run: |
           mkdir -p temp-rankings
           python -m scripts.generate_singles_ranking > temp-rankings/singles-ranking.csv
-
-      - name: Generate doubles ranking
-        run: |
-          mkdir -p temp-rankings
-          python -m scripts.generate_doubles_ranking > temp-rankings/doubles-ranking.csv
+          python -m scripts.generate_doubles_ranking
+          mv doubles-ranking.csv temp-rankings/doubles-ranking.csv
+          mv doubles-individual-ranking.csv temp-rankings/doubles-individual-ranking.csv
 
       - name: Build static site (leaderboard and history)
         id: build

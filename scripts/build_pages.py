@@ -100,24 +100,61 @@ def generate_doubles_table(df):
         """
     
     return f"""
-    <div class="leaderboard-container">
-        <h2>👥 Doubles Leaderboard</h2>
-        <div class="table-responsive">
-            <table class="table table-striped table-hover">
-                <thead>
-                    <tr>
-                        <th>Rank</th>
-                        <th>Team</th>
-                        <th>Rating</th>
-                        <th>Sets W-L</th>
-                        <th>Games W-L</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {table_rows}
-                </tbody>
-            </table>
-        </div>
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Team</th>
+                    <th>Rating</th>
+                    <th>Sets W-L</th>
+                    <th>Games W-L</th>
+                </tr>
+            </thead>
+            <tbody>
+                {table_rows}
+            </tbody>
+        </table>
+    </div>
+    """
+
+def generate_doubles_individual_table(df):
+    """Generate HTML table for doubles individual leaderboard"""
+    df.index += 1
+    df.index.name = "Rank"
+
+    table_rows = ""
+    for rank, row in df.iterrows():
+        player = row["player"]
+        player_link = f'<a href="https://github.com/{player}">{player}</a>'
+        games_record = f'{int(row.get("game_wins", 0))}-{int(row.get("game_losses", 0))}'
+        sets_record = f'{int(row.get("set_wins", 0))}-{int(row.get("set_losses", 0))}'
+        table_rows += f"""
+        <tr>
+            <td>{rank}</td>
+            <td>{player_link}</td>
+            <td>{int(row["rating"])}</td>
+            <td>{sets_record}</td>
+            <td>{games_record}</td>
+        </tr>
+        """
+
+    return f"""
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Player</th>
+                    <th>Rating</th>
+                    <th>Sets W-L</th>
+                    <th>Games W-L</th>
+                </tr>
+            </thead>
+            <tbody>
+                {table_rows}
+            </tbody>
+        </table>
     </div>
     """
 
@@ -139,9 +176,37 @@ def build_site():
         ["team", "rating", "set_wins", "set_losses", "game_wins", "game_losses"]
     )
 
+    doubles_individual_df = load_ranking_data(
+        "temp-rankings/doubles-individual-ranking.csv",
+        ["player", "rating", "set_wins", "set_losses", "game_wins", "game_losses"]
+    )
+
     # --- Generate leaderboard tables ---
     singles_table = generate_singles_table(singles_df)
-    doubles_table = generate_doubles_table(doubles_df)
+    doubles_team_table = generate_doubles_table(doubles_df)
+    doubles_individual_table = generate_doubles_individual_table(doubles_individual_df)
+
+    doubles_tab_content = f"""
+    <div class="leaderboard-container">
+        <h2>👥 Doubles Leaderboard</h2>
+        <ul class="nav nav-tabs" id="doublesTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="teams-tab" data-bs-toggle="tab" data-bs-target="#teams" type="button" role="tab" aria-controls="teams" aria-selected="true">Teams</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="individuals-tab" data-bs-toggle="tab" data-bs-target="#individuals" type="button" role="tab" aria-controls="individuals" aria-selected="false">Individuals</button>
+            </li>
+        </ul>
+        <div class="tab-content" id="doublesTabContent">
+            <div class="tab-pane fade show active" id="teams" role="tabpanel" aria-labelledby="teams-tab">
+                {doubles_team_table}
+            </div>
+            <div class="tab-pane fade" id="individuals" role="tabpanel" aria-labelledby="individuals-tab">
+                {doubles_individual_table}
+            </div>
+        </div>
+    </div>
+    """
 
     # --- Build main leaderboard page (index.html) ---
     owner, repo = get_repo_owner_and_name_or_default()
@@ -156,6 +221,7 @@ def build_site():
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Tennis Leaderboards</title>
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
         <style>
             body {{ padding: 2rem; }}
             .container {{ max-width: 1200px; }}
@@ -173,7 +239,8 @@ def build_site():
                 max-height: 500px; 
                 overflow-y: auto; 
                 border: 1px solid #dee2e6;
-                border-radius: 0.375rem;
+                border-radius: 0 0 0.375rem 0.375rem;
+                border-top: none;
             }}
             .footer {{ 
                 margin-top: 2rem; 
@@ -187,6 +254,14 @@ def build_site():
                 text-align: center; 
                 margin-bottom: 1rem; 
                 color: #495057;
+            }}
+            .nav-tabs .nav-link {{
+                color: #495057;
+            }}
+            .nav-tabs .nav-link.active {{
+                color: #000;
+                background-color: #fff;
+                border-color: #dee2e6 #dee2e6 #fff;
             }}
             @media (max-width: 768px) {{
                 .leaderboards-container {{ 
@@ -205,7 +280,7 @@ def build_site():
             
             <div class="leaderboards-container">
                 {singles_table}
-                {doubles_table}
+                {doubles_tab_content}
             </div>
             
             <div class="footer">
