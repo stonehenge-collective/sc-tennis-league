@@ -36,7 +36,7 @@ def generate_singles_table(df):
     table_rows = ""
     for rank, row in df.iterrows():
         player = row["player"]
-        player_link = f'<a href="https://github.com/{player}">{player}</a>'
+        player_link = f'<a href="player_profile_{player}.html">{player}</a>'
         games_record = f'{int(row.get("game_wins", 0))}-{int(row.get("game_losses", 0))}'
         sets_record = f'{int(row.get("set_wins", 0))}-{int(row.get("set_losses", 0))}'
         table_rows += f"""
@@ -83,7 +83,7 @@ def generate_doubles_table(df):
         # Split team names for individual GitHub links
         players = team.split(", ")
         if len(players) == 2:
-            team_links = f'<a href="https://github.com/{players[0]}">{players[0]}</a>, <a href="https://github.com/{players[1]}">{players[1]}</a>'
+            team_links = f'<a href="player_profile_{players[0]}.html">{players[0]}</a>, <a href="player_profile_{players[1]}.html">{players[1]}</a>'
         else:
             team_links = team
             
@@ -126,7 +126,7 @@ def generate_doubles_individual_table(df):
     table_rows = ""
     for rank, row in df.iterrows():
         player = row["player"]
-        player_link = f'<a href="https://github.com/{player}">{player}</a>'
+        player_link = f'<a href="player_profile_{player}.html">{player}</a>'
         games_record = f'{int(row.get("game_wins", 0))}-{int(row.get("game_losses", 0))}'
         sets_record = f'{int(row.get("set_wins", 0))}-{int(row.get("set_losses", 0))}'
         table_rows += f"""
@@ -161,6 +161,7 @@ def generate_doubles_individual_table(df):
 
 def build_site():
     from scripts.build_history import build_history_page
+    from scripts.build_player_pages import build_player_pages
     
     # Create a single temporary directory for all pages
     temp_dir = tempfile.mkdtemp(prefix="tennis_site_")
@@ -298,6 +299,9 @@ def build_site():
 
     # --- Build Match History Page (history.html) ---
     build_history_page(output_dir=temp_dir)
+
+    # --- Build Player Pages ---
+    build_player_pages(output_dir=temp_dir)
 
     return temp_dir, index_output_file
 

@@ -36,6 +36,10 @@ def find_pr_number_from_comments(owner: str, repo: str, issue_number: int) -> in
 
 def load_matches_from_directory(directory: str, match_type: str):
     """Load matches from a specific directory (singles-matches or doubles-matches)"""
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    repo_root = os.path.dirname(script_dir)
+    directory = os.path.join(repo_root, directory)
+
     if not os.path.exists(directory):
         return []
     
@@ -71,16 +75,18 @@ def load_matches_from_directory(directory: str, match_type: str):
             # Singles: players: [player1, player2]
             if "players" in match_data and isinstance(match_data["players"], list):
                 player1, player2 = match_data["players"][0], match_data["players"][1]
-                players_display = f"{player1} vs {player2}"
+                player1_link = f'<a href="player_profile_{player1}.html">{player1}</a>'
+                player2_link = f'<a href="player_profile_{player2}.html">{player2}</a>'
+                players_display = f"{player1_link} vs {player2_link}"
             else:
                 player1, player2 = match_data.get("player1", ""), match_data.get("player2", "")
                 players_display = f"{player1} vs {player2}"
         else:
             # Doubles: team1: [p1, p2], team2: [p3, p4]
             if "team1" in match_data and "team2" in match_data:
-                team1 = ", ".join(match_data["team1"])
-                team2 = ", ".join(match_data["team2"])
-                players_display = f"({team1}) vs ({team2})"
+                team1_links = ", ".join([f'<a href="player_profile_{p}.html">{p}</a>' for p in match_data["team1"]])
+                team2_links = ", ".join([f'<a href="player_profile_{p}.html">{p}</a>' for p in match_data["team2"]])
+                players_display = f"({team1_links}) vs ({team2_links})"
             else:
                 players_display = "Unknown teams"
 
@@ -116,7 +122,9 @@ def build_history_page(output_dir: Optional[str] = None):
     table_rows = ""
     for match in all_matches:
         # Get PR number if needed
-        pr_number = find_pr_number_from_comments(owner, repo, match["issue_number"])
+        pr_number = 0
+        if os.environ.get("GITHUB_TOKEN"):
+            pr_number = find_pr_number_from_comments(owner, repo, match["issue_number"])
         
         pr_link = f'<a href="https://github.com/{owner}/{repo}/pull/{pr_number}">PR</a>' if pr_number else "N/A"
         issue_link = f'<a href="https://github.com/{owner}/{repo}/issues/{match["issue_number"]}">Issue</a>'
