@@ -18,17 +18,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
       - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
+        run: uv python install 3.12
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: uv sync
 
       - name: Parse and Validate Issue
         id: parse
-        run: python -m scripts.parse_singles_issue
+        run: uv run python -m scripts.parse_singles_issue
         env:
           ISSUE_BODY: ${{ github.event.issue.body }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
@@ -81,7 +82,7 @@ jobs:
       - name: Request reviews from collaborators only
         if: steps.create-pr.outputs.pull-request-number
         run: |
-          python -m scripts.request_reviews
+          uv run python -m scripts.request_reviews
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ steps.create-pr.outputs.pull-request-number }}
@@ -118,17 +119,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
       - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
+        run: uv python install 3.12
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: uv sync
 
       - name: Parse and Validate Issue
         id: parse
-        run: python -m scripts.parse_doubles_issue
+        run: uv run python -m scripts.parse_doubles_issue
         env:
           ISSUE_BODY: ${{ github.event.issue.body }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
@@ -181,7 +183,7 @@ jobs:
       - name: Request reviews from collaborators only
         if: steps.create-pr.outputs.pull-request-number
         run: |
-          python -m scripts.request_reviews
+          uv run python -m scripts.request_reviews
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ steps.create-pr.outputs.pull-request-number }}

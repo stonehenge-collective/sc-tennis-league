@@ -1,6 +1,6 @@
 import os
 import sys
-from typing import List
+
 
 from github_utils import (
     get_bearer_token,
@@ -28,8 +28,8 @@ def main() -> None:
     pr_number = int(pr_number_raw)
     players = [p for p in [player1, player2, player3, player4] if p]
 
-    collaborators: List[str] = []
-    non_collaborators: List[str] = []
+    collaborators: list[str] = []
+    non_collaborators: list[str] = []
     for login in players:
         if check_collaborator(owner, repo, login, token):
             collaborators.append(login)

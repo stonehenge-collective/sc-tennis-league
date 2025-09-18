@@ -3,7 +3,7 @@ name: "🏆 Rebuild Rankings"
 on:
   push:
     branches: [main]
-    paths: ['singles-matches/**', 'doubles-matches/**']
+    paths: ["singles-matches/**", "doubles-matches/**"]
 
 jobs:
   rebuild-rankings-and-deploy:
@@ -21,19 +21,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
       - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.12'
+        run: uv python install 3.12
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: uv sync
 
       - name: Generate ranking data
         run: |
           mkdir -p temp-rankings
-          python -m scripts.generate_singles_ranking > temp-rankings/singles-ranking.csv
-          python -m scripts.generate_doubles_ranking
+          uv run python -m scripts.generate_singles_ranking > temp-rankings/singles-ranking.csv
+          uv run python -m scripts.generate_doubles_ranking
           mv doubles-ranking.csv temp-rankings/doubles-ranking.csv
           mv doubles-individual-ranking.csv temp-rankings/doubles-individual-ranking.csv
 
@@ -42,7 +43,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-        run: python -m scripts.build_pages
+        run: uv run python -m scripts.build_pages
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

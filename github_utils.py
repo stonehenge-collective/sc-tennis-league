@@ -2,7 +2,7 @@ import json
 import os
 import sys
 import time
-from typing import Dict, Iterable, List, Optional, Tuple
+from collections.abc import Iterable
 
 import requests
 
@@ -30,7 +30,7 @@ API_VERSION: str = "2022-11-28"
 DEFAULT_TIMEOUT_SECONDS: int = 30
 
 
-def get_repo_owner_and_name() -> Tuple[str, str]:
+def get_repo_owner_and_name() -> tuple[str, str]:
     """Read `GITHUB_REPOSITORY` ("owner/repo") and return `(owner, repo)`.
 
     Exits the process if env is missing or malformed to match existing scripts.
@@ -45,7 +45,7 @@ def get_repo_owner_and_name() -> Tuple[str, str]:
 
 def get_repo_owner_and_name_or_default(
     default_owner: str = "your-org", default_repo: str = "your-repo"
-) -> Tuple[str, str]:
+) -> tuple[str, str]:
     """Best-effort repo resolution with safe defaults for local usage."""
     repo = os.environ.get("GITHUB_REPOSITORY")
     if repo and "/" in repo:
@@ -67,7 +67,7 @@ def get_bearer_token() -> str:
     return token
 
 
-def _default_headers(token: str) -> Dict[str, str]:
+def _default_headers(token: str) -> dict[str, str]:
     return {
         "Authorization": f"Bearer {token}",
         "Accept": "application/vnd.github+json",
@@ -77,7 +77,7 @@ def _default_headers(token: str) -> Dict[str, str]:
 
 def gh_get(
     url: str,
-    token: Optional[str] = None,
+    token: str | None = None,
     *,
     timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
     retries: int = 2,
@@ -108,8 +108,8 @@ def gh_get(
 
 def gh_post(
     url: str,
-    body: Dict,
-    token: Optional[str] = None,
+    body: dict,
+    token: str | None = None,
     *,
     timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
     retries: int = 2,
@@ -138,7 +138,7 @@ def gh_post(
         return resp
 
 
-def _extract_next_link(link_header: Optional[str]) -> Optional[str]:
+def _extract_next_link(link_header: str | None) -> str | None:
     if not link_header:
         return None
     # Parse very simply: look for rel="next"
@@ -153,10 +153,10 @@ def _extract_next_link(link_header: Optional[str]) -> Optional[str]:
     return None
 
 
-def gh_get_paginated(url: str, token: Optional[str] = None) -> List[Dict]:
+def gh_get_paginated(url: str, token: str | None = None) -> list[dict]:
     """Return all pages for a list endpoint using Link headers."""
-    results: List[Dict] = []
-    next_url: Optional[str] = url
+    results: list[dict] = []
+    next_url: str | None = url
     while next_url:
         resp = gh_get(next_url, token)
         if resp.status_code != 200:
@@ -172,7 +172,7 @@ def gh_get_paginated(url: str, token: Optional[str] = None) -> List[Dict]:
     return results
 
 
-def get_pull_request(owner: str, repo: str, number: int, token: Optional[str] = None) -> Dict:
+def get_pull_request(owner: str, repo: str, number: int, token: str | None = None) -> dict:
     url = f"{GITHUB_API}/repos/{owner}/{repo}/pulls/{number}"
     resp = gh_get(url, token)
     if resp.status_code != 200:
@@ -181,12 +181,12 @@ def get_pull_request(owner: str, repo: str, number: int, token: Optional[str] = 
     return resp.json()
 
 
-def list_pull_request_reviews(owner: str, repo: str, number: int, token: Optional[str] = None) -> List[Dict]:
+def list_pull_request_reviews(owner: str, repo: str, number: int, token: str | None = None) -> list[dict]:
     url = f"{GITHUB_API}/repos/{owner}/{repo}/pulls/{number}/reviews"
     return gh_get_paginated(url, token)
 
 
-def check_collaborator(owner: str, repo: str, username: str, token: Optional[str] = None) -> bool:
+def check_collaborator(owner: str, repo: str, username: str, token: str | None = None) -> bool:
     url = f"{GITHUB_API}/repos/{owner}/{repo}/collaborators/{username}"
     resp = gh_get(url, token)
     if resp.status_code == 204:
@@ -197,7 +197,7 @@ def check_collaborator(owner: str, repo: str, username: str, token: Optional[str
     return False
 
 
-def list_issue_comments(owner: str, repo: str, issue_number: int, token: Optional[str] = None) -> List[Dict]:
+def list_issue_comments(owner: str, repo: str, issue_number: int, token: str | None = None) -> list[dict]:
     url = f"{GITHUB_API}/repos/{owner}/{repo}/issues/{issue_number}/comments"
     return gh_get_paginated(url, token)
 
@@ -208,7 +208,7 @@ def comment_once(
     issue_number: int,
     body_text: str,
     dedupe_hint: str,
-    token: Optional[str] = None,
+    token: str | None = None,
 ) -> None:
     comments = list_issue_comments(owner, repo, issue_number, token)
     if any(dedupe_hint in (c.get("body") or "") for c in comments):
@@ -224,7 +224,7 @@ def request_reviewers(
     repo: str,
     pr_number: int,
     reviewers: Iterable[str],
-    token: Optional[str] = None,
+    token: str | None = None,
 ) -> None:
     reviewers_list = [r for r in reviewers if r]
     if not reviewers_list:

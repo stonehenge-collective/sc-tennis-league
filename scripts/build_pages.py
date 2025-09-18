@@ -8,31 +8,31 @@ from github_utils import get_repo_owner_and_name_or_default
 
 
 """
-This page builder creates dual leaderboards from `temp-rankings/singles-ranking.csv` 
-and `temp-rankings/doubles-ranking.csv` for all aggregates (rating, set and game records). 
+This page builder creates dual leaderboards from `temp-rankings/singles-ranking.csv`
+and `temp-rankings/doubles-ranking.csv` for all aggregates (rating, set and game records).
 """
 
 
-def load_ranking_data(file_path, columns):
+def load_ranking_data(file_path: str, columns: list[str]):
     """Load ranking data from CSV file with fallback to empty DataFrame"""
     try:
         df = pd.read_csv(file_path)
     except FileNotFoundError:
         df = pd.DataFrame(columns=columns)
-    
+
     # Ensure all required columns exist
     for col in columns:
         if col not in df.columns:
             df[col] = 0
-    
+
     return df.sort_values(by="rating", ascending=False).reset_index(drop=True)
 
 
-def generate_singles_table(df):
+def generate_singles_table(df: pd.DataFrame):
     """Generate HTML table for singles leaderboard"""
     df.index += 1
     df.index.name = "Rank"
-    
+
     table_rows = ""
     for rank, row in df.iterrows():
         player = row["player"]
@@ -48,7 +48,7 @@ def generate_singles_table(df):
             <td>{games_record}</td>
         </tr>
         """
-    
+
     return f"""
     <div class="leaderboard-container">
         <h2>🎾 Singles Leaderboard</h2>
@@ -72,11 +72,11 @@ def generate_singles_table(df):
     """
 
 
-def generate_doubles_table(df):
+def generate_doubles_table(df: pd.DataFrame):
     """Generate HTML table for doubles leaderboard"""
     df.index += 1
     df.index.name = "Rank"
-    
+
     table_rows = ""
     for rank, row in df.iterrows():
         team = row["team"]
@@ -86,7 +86,7 @@ def generate_doubles_table(df):
             team_links = f'<a href="player_profile_{players[0]}.html">{players[0]}</a>, <a href="player_profile_{players[1]}.html">{players[1]}</a>'
         else:
             team_links = team
-            
+
         games_record = f'{int(row.get("game_wins", 0))}-{int(row.get("game_losses", 0))}'
         sets_record = f'{int(row.get("set_wins", 0))}-{int(row.get("set_losses", 0))}'
         table_rows += f"""
@@ -98,7 +98,7 @@ def generate_doubles_table(df):
             <td>{games_record}</td>
         </tr>
         """
-    
+
     return f"""
     <div class="table-responsive">
         <table class="table table-striped table-hover">
@@ -118,7 +118,7 @@ def generate_doubles_table(df):
     </div>
     """
 
-def generate_doubles_individual_table(df):
+def generate_doubles_individual_table(df: pd.DataFrame):
     """Generate HTML table for doubles individual leaderboard"""
     df.index += 1
     df.index.name = "Rank"
@@ -162,7 +162,7 @@ def generate_doubles_individual_table(df):
 def build_site():
     from scripts.build_history import build_history_page
     from scripts.build_player_pages import build_player_pages
-    
+
     # Create a single temporary directory for all pages
     temp_dir = tempfile.mkdtemp(prefix="tennis_site_")
 
@@ -171,9 +171,9 @@ def build_site():
         "temp-rankings/singles-ranking.csv",
         ["player", "rating", "set_wins", "set_losses", "game_wins", "game_losses"]
     )
-    
+
     doubles_df = load_ranking_data(
-        "temp-rankings/doubles-ranking.csv", 
+        "temp-rankings/doubles-ranking.csv",
         ["team", "rating", "set_wins", "set_losses", "game_wins", "game_losses"]
     )
 
@@ -227,33 +227,33 @@ def build_site():
             body {{ padding: 2rem; }}
             .container {{ max-width: 1200px; }}
             h1 {{ text-align: center; margin-bottom: 2rem; }}
-            .leaderboards-container {{ 
-                display: flex; 
-                gap: 2rem; 
+            .leaderboards-container {{
+                display: flex;
+                gap: 2rem;
                 margin-bottom: 2rem;
             }}
-            .leaderboard-container {{ 
+            .leaderboard-container {{
                 flex: 1;
                 min-height: 400px;
             }}
-            .table-responsive {{ 
-                max-height: 500px; 
-                overflow-y: auto; 
+            .table-responsive {{
+                max-height: 500px;
+                overflow-y: auto;
                 border: 1px solid #dee2e6;
                 border-radius: 0 0 0.375rem 0.375rem;
                 border-top: none;
             }}
-            .footer {{ 
-                margin-top: 2rem; 
+            .footer {{
+                margin-top: 2rem;
                 padding-top: 2rem;
                 border-top: 1px solid #dee2e6;
-                font-size: 0.9rem; 
-                color: #6c757d; 
+                font-size: 0.9rem;
+                color: #6c757d;
                 text-align: center;
             }}
-            h2 {{ 
-                text-align: center; 
-                margin-bottom: 1rem; 
+            h2 {{
+                text-align: center;
+                margin-bottom: 1rem;
                 color: #495057;
             }}
             .nav-tabs .nav-link {{
@@ -265,8 +265,8 @@ def build_site():
                 border-color: #dee2e6 #dee2e6 #fff;
             }}
             @media (max-width: 768px) {{
-                .leaderboards-container {{ 
-                    flex-direction: column; 
+                .leaderboards-container {{
+                    flex-direction: column;
                 }}
             }}
         </style>
@@ -274,16 +274,16 @@ def build_site():
     <body>
         <div class="container">
             <h1>🏆 Tennis Leaderboards</h1>
-            
+
             <marquee behavior="scroll" direction="left" bgcolor="#f8f9fa" style="padding: 10px; margin-bottom: 2rem; border: 1px solid #dee2e6; border-radius: 0.375rem; font-weight: 500;">
                 🎾 No ball boys were harmed in the making of these statistics • Serving up fresh rankings daily! • Love means nothing in tennis, but these scores mean everything! • Deuce you believe these rankings? • Game, Set, Match... and GitHub Issues! 🎾
             </marquee>
-            
+
             <div class="leaderboards-container">
                 {singles_table}
                 {doubles_tab_content}
             </div>
-            
+
             <div class="footer">
                 <p>Last updated: {timestamp}</p>
                 <p><a href="history.html">Match History</a> | <a href="{repo_url}">GitHub Repository</a></p>
