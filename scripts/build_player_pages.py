@@ -57,21 +57,24 @@ def calculate_elo_history():
     for date in sorted(daily_events.keys()):
         events = daily_events[date]
 
-        # Store daily elo changes for all players
-        daily_elo_changes = {} # {player: {type: 'singles'/'doubles', elos: [elo_after_set_1, ...], ...}}
+        # Store daily elo changes for all players, separated by match type
+        daily_elo_changes = {} # {player: {'singles': {'elos': [], 'details': []}, 'doubles': {'elos': [], 'details': []}}}
 
         for event in events:
             match_data = event['data']
             issue_number = get_issue_number_from_filename(event['filename'])
 
+            # Helper to initialize player data structures
+            def ensure_player_data(p):
+                if p not in PLAYER_DATA:
+                    PLAYER_DATA[p] = {'singles': {'candlestick': [], 'scatter': []}, 'doubles': {'candlestick': [], 'scatter': []}}
+                if p not in daily_elo_changes:
+                    daily_elo_changes[p] = {'singles': {'elos': [], 'details': []}, 'doubles': {'elos': [], 'details': []}}
+
             if 'players' in match_data: # Singles match
                 player1, player2 = match_data['players']
-
-                for p in [player1, player2]:
-                    if p not in PLAYER_DATA:
-                        PLAYER_DATA[p] = {'singles': {'candlestick': [], 'scatter': []}, 'doubles': {'candlestick': [], 'scatter': []}}
-                    if p not in daily_elo_changes:
-                        daily_elo_changes[p] = {'type': 'singles', 'elos': [], 'details': []}
+                ensure_player_data(player1)
+                ensure_player_data(player2)
 
                 for s in match_data.get('sets', []):
                     p1_games, p2_games = int(s[0]), int(s[1])
@@ -94,24 +97,20 @@ def calculate_elo_history():
                     singles_ratings[winner] = rW_after
                     singles_ratings[loser] = rL_after
 
-                    daily_elo_changes[winner]['elos'].append(rW_after)
-                    daily_elo_changes[loser]['elos'].append(rL_after)
+                    daily_elo_changes[winner]['singles']['elos'].append(rW_after)
+                    daily_elo_changes[loser]['singles']['elos'].append(rL_after)
 
-                    # Store details for scatter plot tooltips
                     winner_details = {'date': date, 'opponent': loser, 'sets': f"{p1_games}-{p2_games}" if winner==player1 else f"{p2_games}-{p1_games}", 'elo_change': round(elo_change_winner), 'elo': round(rW_after), 'result': 'W', 'issue_number': issue_number}
                     loser_details = {'date': date, 'opponent': winner, 'sets': f"{p2_games}-{p1_games}" if loser==player1 else f"{p1_games}-{p2_games}", 'elo_change': round(elo_change_loser), 'elo': round(rL_after), 'result': 'L', 'issue_number': issue_number}
-                    daily_elo_changes[winner]['details'].append(winner_details)
-                    daily_elo_changes[loser]['details'].append(loser_details)
+                    daily_elo_changes[winner]['singles']['details'].append(winner_details)
+                    daily_elo_changes[loser]['singles']['details'].append(loser_details)
 
             elif 'team1' in match_data: # Doubles match
                 team1 = match_data['team1']
                 team2 = match_data['team2']
-
-                for p in team1 + team2:
-                    if p not in PLAYER_DATA:
-                        PLAYER_DATA[p] = {'singles': {'candlestick': [], 'scatter': []}, 'doubles': {'candlestick': [], 'scatter': []}}
-                    if p not in daily_elo_changes:
-                        daily_elo_changes[p] = {'type': 'doubles', 'elos': [], 'details': []}
+                all_players = team1 + team2
+                for p in all_players:
+                    ensure_player_data(p)
 
                 r_team1_avg = sum(doubles_ratings.get(p, 1200) for p in team1) / 2
                 r_team2_avg = sum(doubles_ratings.get(p, 1200) for p in team2) / 2
@@ -121,44 +120,47 @@ def calculate_elo_history():
                     if t1_games == t2_games: continue
 
                     winning_team, losing_team = (team1, team2) if t1_games > t2_games else (team2, team1)
-
                     e_win = expected(r_team1_avg, r_team2_avg) if winning_team == team1 else expected(r_team2_avg, r_team1_avg)
-
                     elo_change_per_player = K * (1 - e_win) / 2
 
                     for p in winning_team:
                         r_before = doubles_ratings.get(p, 1200)
                         r_after = r_before + elo_change_per_player
                         doubles_ratings[p] = r_after
-                        daily_elo_changes[p]['elos'].append(r_after)
+                        daily_elo_changes[p]['doubles']['elos'].append(r_after)
                         details = {'date': date, 'opponent': ", ".join(losing_team), 'sets': f"{t1_games}-{t2_games}" if winning_team==team1 else f"{t2_games}-{t1_games}", 'elo_change': round(elo_change_per_player), 'elo': round(r_after), 'result': 'W', 'issue_number': issue_number, 'partner': [partner for partner in winning_team if partner != p][0]}
-                        daily_elo_changes[p]['details'].append(details)
+                        daily_elo_changes[p]['doubles']['details'].append(details)
 
                     for p in losing_team:
                         r_before = doubles_ratings.get(p, 1200)
                         r_after = r_before - elo_change_per_player
                         doubles_ratings[p] = r_after
-                        daily_elo_changes[p]['elos'].append(r_after)
+                        daily_elo_changes[p]['doubles']['elos'].append(r_after)
                         details = {'date': date, 'opponent': ", ".join(winning_team), 'sets': f"{t2_games}-{t1_games}" if losing_team==team1 else f"{t1_games}-{t2_games}", 'elo_change': round(-elo_change_per_player), 'elo': round(r_after), 'result': 'L', 'issue_number': issue_number, 'partner': [partner for partner in losing_team if partner != p][0]}
-                        daily_elo_changes[p]['details'].append(details)
+                        daily_elo_changes[p]['doubles']['details'].append(details)
 
-        # Process daily aggregations
-        for player, changes in daily_elo_changes.items():
-            match_type = changes['type']
-            elos = changes['elos']
-            if not elos: continue
+        # Process daily aggregations for both singles and doubles
+        for player, daily_data in daily_elo_changes.items():
+            for match_type, changes in daily_data.items():
+                elos = changes['elos']
+                if not elos: continue
 
-            open_elo = elos[0]
-            close_elo = elos[-1]
-            high_elo = max(elos)
-            low_elo = min(elos)
+                # Use the player's ELO before the first match of the day as the opening ELO
+                first_detail = changes['details'][0]
+                first_elo_after = first_detail['elo']
+                elo_change_first_match = first_detail['elo_change']
+                open_elo = first_elo_after - elo_change_first_match
 
-            candlestick_data = {'x': date, 'o': open_elo, 'h': high_elo, 'l': low_elo, 'c': close_elo}
-            PLAYER_DATA[player][match_type]['candlestick'].append(candlestick_data)
+                close_elo = elos[-1]
+                high_elo = max(open_elo, *elos)
+                low_elo = min(open_elo, *elos)
 
-            for i, elo in enumerate(elos):
-                scatter_data = {'x': date, 'y': elo, 'details': changes['details'][i]}
-                PLAYER_DATA[player][match_type]['scatter'].append(scatter_data)
+                candlestick_data = {'x': date, 'o': open_elo, 'h': high_elo, 'l': low_elo, 'c': close_elo}
+                PLAYER_DATA[player][match_type]['candlestick'].append(candlestick_data)
+
+                for i, elo in enumerate(elos):
+                    scatter_data = {'x': date, 'y': elo, 'details': changes['details'][i]}
+                    PLAYER_DATA[player][match_type]['scatter'].append(scatter_data)
 
 
 def generate_player_pages(output_dir):
