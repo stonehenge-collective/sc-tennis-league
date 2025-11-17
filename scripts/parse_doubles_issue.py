@@ -51,10 +51,10 @@ def validate_data(data):
         errors.append("Match date is missing or not in the correct YYYY-MM-DD format.")
 
     if not data.get("team1") or len(data["team1"]) != 2:
-        errors.append("Team 1 must have exactly two players (e.g., '@alice, @bob').")
+        errors.append("Team 1 must have exactly two players (e.g., '@player_one, @player_two').")
 
     if not data.get("team2") or len(data["team2"]) != 2:
-        errors.append("Team 2 must have exactly two players (e.g., '@charlie, @david').")
+        errors.append("Team 2 must have exactly two players (e.g., '@player_three, @player_four').")
 
     if not data.get("sets"):
         errors.append("At least one set must be recorded in the 'Sets' section.")

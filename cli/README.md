@@ -47,19 +47,19 @@ You can also use the full workflow name or filename:
 Create a singles match issue:
 
 ```bash
-./tennis match singles --players "@alice,@bob" --sets "6-3,4-6,6-4" --date "2025-01-15"
+./tennis match singles --players "@player_one,@player_two" --sets "6-3,4-6,6-4" --date "2025-01-15"
 ```
 
 Short form:
 
 ```bash
-./tennis match singles -p "@alice,@bob" -s "6-3,4-6,6-4" -d "2025-01-15"
+./tennis match singles -p "@player_one,@player_two" -s "6-3,4-6,6-4" -d "2025-01-15"
 ```
 
 If no date is provided, today's date will be used:
 
 ```bash
-./tennis match singles -p "@alice,@bob" -s "6-3,4-6,6-4"
+./tennis match singles -p "@player_one,@player_two" -s "6-3,4-6,6-4"
 ```
 
 #### Doubles Match
@@ -67,13 +67,13 @@ If no date is provided, today's date will be used:
 Create a doubles match issue:
 
 ```bash
-./tennis match doubles --teams "@alice,@bob||@charlie,@dave" --sets "6-3,4-6,6-4" --date "2025-01-15"
+./tennis match doubles --teams "@player_one,@player_two||@player_three,@player_four" --sets "6-3,4-6,6-4" --date "2025-01-15"
 ```
 
 Short form:
 
 ```bash
-./tennis match doubles -t "@alice,@bob||@charlie,@dave" -s "6-3,4-6,6-4" -d "2025-01-15"
+./tennis match doubles -t "@player_one,@player_two||@player_three,@player_four" -s "6-3,4-6,6-4" -d "2025-01-15"
 ```
 
 ## Examples
@@ -86,14 +86,14 @@ export GITHUB_REPOSITORY=stonehenge-collective/tennis
 # Trigger rebuild rankings workflow
 ./tennis workflow trigger rebuild-rankings
 
-# Create a singles match (Alice beats Bob)
-./tennis match singles -p "@alice,@bob" -s "6-3,4-6,6-4"
+# Create a singles match (Player 1 beats Player 2)
+./tennis match singles -p "@player_one,@player_two" -s "6-3,4-6,6-4"
 
-# Create a doubles match (Alice & Bob beat Charlie & Dave)
-./tennis match doubles -t "@alice,@bob||@charlie,@dave" -s "6-3,4-6,10-8"
+# Create a doubles match (Player 1 & Player 2 beat Player 3 & Player 4)
+./tennis match doubles -t "@player_one,@player_two||@player_three,@player_four" -s "6-3,4-6,10-8"
 
 # Use specific date
-./tennis match singles -p "@alice,@bob" -s "6-2,6-1" -d "2025-01-15"
+./tennis match singles -p "@player_one,@player_two" -s "6-2,6-1" -d "2025-01-15"
 ```
 
 ## Notes

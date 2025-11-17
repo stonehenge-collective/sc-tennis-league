@@ -23,8 +23,8 @@ var singlesMatchCmd = &cobra.Command{
 	Long: `Create a GitHub issue for a singles match.
 
 Examples:
-  tennis match singles --players "@alice,@bob" --sets "6-3,4-6,6-4" --date "2025-01-15"
-  tennis match singles -p "@alice,@bob" -s "6-3,4-6,6-4" -d "2025-01-15"
+  tennis match singles --players "@player_one,@player_two" --sets "6-3,4-6,6-4" --date "2025-01-15"
+  tennis match singles -p "@player_one,@player_two" -s "6-3,4-6,6-4" -d "2025-01-15"
 
 If date is not provided, today's date will be used.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -75,8 +75,8 @@ var doublesMatchCmd = &cobra.Command{
 	Long: `Create a GitHub issue for a doubles match.
 
 Examples:
-  tennis match doubles --teams "@alice,@bob||@charlie,@dave" --sets "6-3,4-6,6-4" --date "2025-01-15"
-  tennis match doubles -t "@alice,@bob||@charlie,@dave" -s "6-3,4-6,6-4" -d "2025-01-15"
+  tennis match doubles --teams "@player_one,@player_two||@player_three,@player_four" --sets "6-3,4-6,6-4" --date "2025-01-15"
+  tennis match doubles -t "@player_one,@player_two||@player_three,@player_four" -s "6-3,4-6,6-4" -d "2025-01-15"
 
 If date is not provided, today's date will be used.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -238,12 +238,12 @@ func createDoublesIssue(teams [][]string, sets []string, date string) error {
 
 func init() {
 	// Singles command flags
-	singlesMatchCmd.Flags().StringP("players", "p", "", "Players separated by comma (winner first): @alice,@bob")
+	singlesMatchCmd.Flags().StringP("players", "p", "", "Players separated by comma (winner first): @player_one,@player_two")
 	singlesMatchCmd.Flags().StringP("sets", "s", "", "Sets separated by comma: 6-3,4-6,6-4")
 	singlesMatchCmd.Flags().StringP("date", "d", "", "Match date (YYYY-MM-DD), defaults to today")
 
 	// Doubles command flags
-	doublesMatchCmd.Flags().StringP("teams", "t", "", "Teams separated by || : @alice,@bob||@charlie,@dave")
+	doublesMatchCmd.Flags().StringP("teams", "t", "", "Teams separated by || : @player_one,@player_two||@player_three,@player_four")
 	doublesMatchCmd.Flags().StringP("sets", "s", "", "Sets separated by comma: 6-3,4-6,6-4")
 	doublesMatchCmd.Flags().StringP("date", "d", "", "Match date (YYYY-MM-DD), defaults to today")
 
