@@ -28,6 +28,36 @@ def load_ranking_data(file_path: str, columns: list[str]):
     return df.sort_values(by="rating", ascending=False).reset_index(drop=True)
 
 
+def generate_marquee_content():
+    """Generate HTML for a marquee banner of recent Elo changes."""
+    try:
+        elo_changes_df = pd.read_csv("temp-rankings/elo_changes.csv")
+        # Get the last 20 ELO changes
+        recent_changes = elo_changes_df.tail(20)
+
+        if recent_changes.empty:
+            return "No recent ELO changes."
+
+        parts = []
+        for _, row in recent_changes.iterrows():
+            player = row["player"]
+            change = row["change"]
+
+            if change > 0:
+                arrow = f'<span style="color: green;">▲</span>'
+                sign = "+"
+            else:
+                arrow = f'<span style="color: red;">▼</span>'
+                sign = ""
+
+            parts.append(f'{player} {arrow} {sign}{change:.1f}')
+
+        return " • ".join(parts)
+
+    except FileNotFoundError:
+        return "🎾 No ball boys were harmed in the making of these statistics • Serving up fresh rankings daily! • Love means nothing in tennis, but these scores mean everything! • Deuce you believe these rankings? • Game, Set, Match... and GitHub Issues! 🎾"
+
+
 def generate_singles_table(df: pd.DataFrame):
     """Generate HTML table for singles leaderboard"""
     df.index += 1
@@ -192,17 +222,17 @@ def build_site():
         <h2>👥 Doubles Leaderboard</h2>
         <ul class="nav nav-tabs" id="doublesTab" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="teams-tab" data-bs-toggle="tab" data-bs-target="#teams" type="button" role="tab" aria-controls="teams" aria-selected="true">Teams</button>
+                <button class="nav-link" id="teams-tab" data-bs-toggle="tab" data-bs-target="#teams" type="button" role="tab" aria-controls="teams" aria-selected="false">Teams</button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="individuals-tab" data-bs-toggle="tab" data-bs-target="#individuals" type="button" role="tab" aria-controls="individuals" aria-selected="false">Individuals</button>
+                <button class="nav-link active" id="individuals-tab" data-bs-toggle="tab" data-bs-target="#individuals" type="button" role="tab" aria-controls="individuals" aria-selected="true">Individuals</button>
             </li>
         </ul>
         <div class="tab-content" id="doublesTabContent">
-            <div class="tab-pane fade show active" id="teams" role="tabpanel" aria-labelledby="teams-tab">
+            <div class="tab-pane fade" id="teams" role="tabpanel" aria-labelledby="teams-tab">
                 {doubles_team_table}
             </div>
-            <div class="tab-pane fade" id="individuals" role="tabpanel" aria-labelledby="individuals-tab">
+            <div class="tab-pane fade show active" id="individuals" role="tabpanel" aria-labelledby="individuals-tab">
                 {doubles_individual_table}
             </div>
         </div>
@@ -276,7 +306,7 @@ def build_site():
             <h1>🏆 Tennis Leaderboards</h1>
 
             <marquee behavior="scroll" direction="left" bgcolor="#f8f9fa" style="padding: 10px; margin-bottom: 2rem; border: 1px solid #dee2e6; border-radius: 0.375rem; font-weight: 500;">
-                🎾 No ball boys were harmed in the making of these statistics • Serving up fresh rankings daily! • Love means nothing in tennis, but these scores mean everything! • Deuce you believe these rankings? • Game, Set, Match... and GitHub Issues! 🎾
+                {generate_marquee_content()}
             </marquee>
 
             <div class="leaderboards-container">

@@ -7,6 +7,7 @@ import tempfile
 from typing import Optional
 
 from github_utils import get_repo_owner_and_name_or_default, list_issue_comments
+from scripts.elo_utils import update_elo_ratings, update_doubles_elo_ratings, normalize_team
 
 # Pre-compiled regex for efficiency
 # Matches " #123" in the bot's comment
@@ -34,23 +35,23 @@ def find_pr_number_from_comments(owner: str, repo: str, issue_number: int) -> in
     return 0
 
 
-def load_matches_from_directory(directory: str, match_type: str):
-    """Load matches from a specific directory (singles-matches or doubles-matches)"""
+def load_matches_from_directory(directory: str, match_type: str, ratings, team_ratings=None):
+    """Load matches from a specific directory and calculate ELO changes."""
     script_dir = os.path.dirname(os.path.abspath(__file__))
     repo_root = os.path.dirname(script_dir)
     directory = os.path.join(repo_root, directory)
 
     if not os.path.exists(directory):
         return []
-    
+
     match_files = sorted(
-        [f for f in os.listdir(directory) if f.endswith(".yml")], reverse=True
+        [f for f in os.listdir(directory) if f.endswith(".yml")], reverse=False
     )
-    
+
     matches = []
     for match_file in match_files:
         match_path = os.path.join(directory, match_file)
-        with open(match_path, 'r') as f:
+        with open(match_path, "r") as f:
             match_data = yaml.safe_load(f)
 
         issue_search = ISSUE_NUM_RE.search(match_file)
@@ -58,46 +59,79 @@ def load_matches_from_directory(directory: str, match_type: str):
             continue
 
         issue_number = int(issue_search.group(1))
-        
-        # Format score - handle both array format [6, 4] and object format
+
         sets_html = ""
+        elo_changes_display = []
+
         for s in match_data["sets"]:
             if isinstance(s, list) and len(s) == 2:
-                # Array format: [6, 4]
                 sets_html += f"<li>{s[0]}-{s[1]}</li>"
-            elif isinstance(s, dict) and 'player1_games' in s and 'player2_games' in s:
-                # Object format: {player1_games: 6, player2_games: 4}
-                sets_html += f"<li>{s['player1_games']}-{s['player2_games']}</li>"
+                p1_games, p2_games = s[0], s[1]
+            else:
+                continue
+
+            if match_type == "singles":
+                player1, player2 = match_data["players"]
+                winner, loser = (player1, player2) if p1_games > p2_games else (player2, player1)
+
+                old_winner_rating = ratings.get(winner, 1200)
+                old_loser_rating = ratings.get(loser, 1200)
+
+                new_winner_rating, new_loser_rating = update_elo_ratings(ratings, winner, loser)
+
+                ratings[winner] = new_winner_rating
+                ratings[loser] = new_loser_rating
+
+                elo_change_winner = new_winner_rating - old_winner_rating
+                elo_change_loser = new_loser_rating - old_loser_rating
+
+                elo_changes_display.append(
+                    f'{winner}: {elo_change_winner:+.1f}, {loser}: {elo_change_loser:+.1f}'
+                )
+
+            else: # doubles
+                team1, team2 = match_data["team1"], match_data["team2"]
+                winner_team, loser_team = (team1, team2) if p1_games > p2_games else (team2, team1)
+
+                new_rW_team, new_rL_team, new_r_w1, new_r_w2, new_r_l1, new_r_l2 = update_doubles_elo_ratings(team_ratings, ratings, winner_team, loser_team)
+
+                elo_change_w1 = new_r_w1 - ratings.get(winner_team[0], 1200)
+                elo_change_w2 = new_r_w2 - ratings.get(winner_team[1], 1200)
+                elo_change_l1 = new_r_l1 - ratings.get(loser_team[0], 1200)
+                elo_change_l2 = new_r_l2 - ratings.get(loser_team[1], 1200)
+
+                ratings[winner_team[0]] = new_r_w1
+                ratings[winner_team[1]] = new_r_w2
+                ratings[loser_team[0]] = new_r_l1
+                ratings[loser_team[1]] = new_r_l2
+
+                team_ratings[normalize_team(winner_team)] = new_rW_team
+                team_ratings[normalize_team(loser_team)] = new_rL_team
+
+                elo_changes_display.append(
+                    f'{winner_team[0]}: {elo_change_w1:+.1f}, {winner_team[1]}: {elo_change_w2:+.1f}, '
+                    f'{loser_team[0]}: {elo_change_l1:+.1f}, {loser_team[1]}: {elo_change_l2:+.1f}'
+                )
+
         score_html = f"<ul>{sets_html}</ul>"
 
-        # Handle different match formats
         if match_type == "singles":
-            # Singles: players: [player1, player2]
-            if "players" in match_data and isinstance(match_data["players"], list):
-                player1, player2 = match_data["players"][0], match_data["players"][1]
-                player1_link = f'<a href="player_profile_{player1}.html">{player1}</a>'
-                player2_link = f'<a href="player_profile_{player2}.html">{player2}</a>'
-                players_display = f"{player1_link} vs {player2_link}"
-            else:
-                player1, player2 = match_data.get("player1", ""), match_data.get("player2", "")
-                players_display = f"{player1} vs {player2}"
+            player1, player2 = match_data["players"]
+            players_display = f'<a href="player_profile_{player1}.html">{player1}</a> vs <a href="player_profile_{player2}.html">{player2}</a>'
         else:
-            # Doubles: team1: [p1, p2], team2: [p3, p4]
-            if "team1" in match_data and "team2" in match_data:
-                team1_links = ", ".join([f'<a href="player_profile_{p}.html">{p}</a>' for p in match_data["team1"]])
-                team2_links = ", ".join([f'<a href="player_profile_{p}.html">{p}</a>' for p in match_data["team2"]])
-                players_display = f"({team1_links}) vs ({team2_links})"
-            else:
-                players_display = "Unknown teams"
+            team1_links = ", ".join([f'<a href="player_profile_{p}.html">{p}</a>' for p in match_data["team1"]])
+            team2_links = ", ".join([f'<a href="player_profile_{p}.html">{p}</a>' for p in match_data["team2"]])
+            players_display = f"({team1_links}) vs ({team2_links})"
 
         matches.append({
             "date": match_data["date"],
             "players_display": players_display,
             "score": score_html,
             "issue_number": issue_number,
-            "type": match_type.title()
+            "type": match_type.title(),
+            "elo_changes": "<br>".join(elo_changes_display)
         })
-    
+
     return matches
 
 
@@ -110,10 +144,13 @@ def build_history_page(output_dir: Optional[str] = None):
     """
     owner, repo = get_repo_owner_and_name_or_default()
 
+    ratings = {}
+    team_ratings = {}
+
     # Load matches from both directories
-    singles_matches = load_matches_from_directory("singles-matches", "singles")
-    doubles_matches = load_matches_from_directory("doubles-matches", "doubles")
-    
+    singles_matches = load_matches_from_directory("singles-matches", "singles", ratings)
+    doubles_matches = load_matches_from_directory("doubles-matches", "doubles", ratings, team_ratings)
+
     # Combine and sort all matches by date (most recent first)
     all_matches = singles_matches + doubles_matches
     all_matches.sort(key=lambda x: x["date"], reverse=True)
@@ -121,7 +158,6 @@ def build_history_page(output_dir: Optional[str] = None):
     # Generate the HTML table rows
     table_rows = ""
     for match in all_matches:
-        # Get PR number if needed
         pr_number = 0
         if os.environ.get("GITHUB_TOKEN"):
             pr_number = find_pr_number_from_comments(owner, repo, match["issue_number"])
@@ -129,7 +165,6 @@ def build_history_page(output_dir: Optional[str] = None):
         pr_link = f'<a href="https://github.com/{owner}/{repo}/pull/{pr_number}">PR</a>' if pr_number else "N/A"
         issue_link = f'<a href="https://github.com/{owner}/{repo}/issues/{match["issue_number"]}">Issue</a>'
         
-        # Add type badge
         type_badge = f'<span class="badge bg-{"primary" if match["type"] == "Singles" else "success"}">{match["type"]}</span>'
 
         table_rows += f"""
@@ -138,6 +173,7 @@ def build_history_page(output_dir: Optional[str] = None):
             <td>{type_badge}</td>
             <td>{match["players_display"]}</td>
             <td>{match["score"]}</td>
+            <td>{match["elo_changes"]}</td>
             <td>{issue_link}</td>
             <td>{pr_link}</td>
         </tr>
@@ -152,6 +188,7 @@ def build_history_page(output_dir: Optional[str] = None):
                     <th>Type</th>
                     <th>Players/Teams</th>
                     <th>Score</th>
+                    <th>ELO Change</th>
                     <th>Issue</th>
                     <th>PR</th>
                 </tr>

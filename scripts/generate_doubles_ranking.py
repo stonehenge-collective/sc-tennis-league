@@ -2,8 +2,7 @@ import glob
 import sys
 import yaml
 import pandas as pd
-
-K = 32
+from scripts.elo_utils import update_doubles_elo_ratings, normalize_team
 
 # --- Team-based data ---
 team_ratings = {}
@@ -12,19 +11,6 @@ team_stats = {}
 # --- Individual-based data ---
 individual_ratings = {}
 individual_stats = {}
-
-
-def expected(rA, rB):
-    return 1 / (1 + 10 ** ((rB - rA) / 400))
-
-
-def normalize_team(team_players):
-    """Normalize team representation so PlayerA,PlayerB == PlayerB,PlayerA"""
-    if len(team_players) != 2:
-        raise ValueError(f"Team must have exactly 2 players, got {len(team_players)}")
-    
-    sorted_players = sorted(team_players)
-    return f"{sorted_players[0]}, {sorted_players[1]}"
 
 
 def _ensure_team_stats(team: str) -> None:
@@ -109,41 +95,15 @@ def apply_match(match):
 
 
         # --- ELO Updates ---
-        # 1. Team-based ELO
-        rW_team = team_ratings.get(set_winner_key, 1200)
-        rL_team = team_ratings.get(set_loser_key, 1200)
-        eW_team = expected(rW_team, rL_team)
-        team_ratings[set_winner_key] = rW_team + K * (1 - eW_team)
-        team_ratings[set_loser_key] = rL_team + K * (0 - (1-eW_team))
+        new_rW_team, new_rL_team, new_r_w1, new_r_w2, new_r_l1, new_r_l2 = update_doubles_elo_ratings(team_ratings, individual_ratings, set_winner_players, set_loser_players)
 
-        # 2. Individual-based ELO
-        # Get individual ratings, default to 1200
-        r_p1_t1 = individual_ratings.get(team1_players[0], 1200)
-        r_p2_t1 = individual_ratings.get(team1_players[1], 1200)
-        r_p1_t2 = individual_ratings.get(team2_players[0], 1200)
-        r_p2_t2 = individual_ratings.get(team2_players[1], 1200)
+        team_ratings[set_winner_key] = new_rW_team
+        team_ratings[set_loser_key] = new_rL_team
 
-        # Effective team rating is the average of individual ratings
-        r_team1_eff = (r_p1_t1 + r_p2_t1) / 2
-        r_team2_eff = (r_p1_t2 + r_p2_t2) / 2
-
-        e_team1 = expected(r_team1_eff, r_team2_eff)
-
-        # Determine winner and loser for this set
-        (winner_p1, winner_p2) = (team1_players[0], team1_players[1]) if t1_games > t2_games else (team2_players[0], team2_players[1])
-        (loser_p1, loser_p2) = (team2_players[0], team2_players[1]) if t1_games > t2_games else (team1_players[0], team1_players[1])
-
-        (r_w1, r_w2) = (individual_ratings.get(winner_p1, 1200), individual_ratings.get(winner_p2, 1200))
-        (r_l1, r_l2) = (individual_ratings.get(loser_p1, 1200), individual_ratings.get(loser_p2, 1200))
-
-        # Calculate rating change based on effective team ratings
-        rating_change = K * (1 - (e_team1 if set_winner_players == team1_players else (1 - e_team1)))
-
-        # Apply rating change to each player
-        individual_ratings[winner_p1] = r_w1 + rating_change
-        individual_ratings[winner_p2] = r_w2 + rating_change
-        individual_ratings[loser_p1] = r_l1 - rating_change
-        individual_ratings[loser_p2] = r_l2 - rating_change
+        individual_ratings[set_winner_players[0]] = new_r_w1
+        individual_ratings[set_winner_players[1]] = new_r_w2
+        individual_ratings[set_loser_players[0]] = new_r_l1
+        individual_ratings[set_loser_players[1]] = new_r_l2
 
 
 def main():

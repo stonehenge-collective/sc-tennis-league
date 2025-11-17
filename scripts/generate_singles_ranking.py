@@ -2,18 +2,15 @@ import glob
 import sys
 import yaml
 import pandas as pd
+from scripts.elo_utils import update_elo_ratings
 
-K = 32
 ratings = {}
+elo_changes = []
 # Stats per player. We'll compute:
 # - set_wins/set_losses: count of sets won/lost
 # - game_wins/game_losses: total games won/lost across all recorded sets
 # - wins/losses: kept for backward compatibility (mirror set stats)
 stats = {}
-
-
-def expected(rA, rB):
-    return 1 / (1 + 10 ** ((rB - rA) / 400))
 
 
 def _ensure_player(player: str) -> None:
@@ -67,12 +64,26 @@ def apply_match(match):
         stats[set_loser]["set_losses"] += 1
 
         # Elo update for this set (independent event)
-        rW = ratings.get(set_winner, 1200)
-        rL = ratings.get(set_loser, 1200)
-        eW = expected(rW, rL)
-        eL = expected(rL, rW)
-        ratings[set_winner] = rW + K * (1 - eW)
-        ratings[set_loser] = rL + K * (0 - eL)
+        old_winner_rating = ratings.get(set_winner, 1200)
+        old_loser_rating = ratings.get(set_loser, 1200)
+
+        new_winner_rating, new_loser_rating = update_elo_ratings(ratings, set_winner, set_loser)
+
+        ratings[set_winner] = new_winner_rating
+        ratings[set_loser] = new_loser_rating
+
+        elo_changes.append({
+            "player": set_winner,
+            "old_rating": old_winner_rating,
+            "new_rating": new_winner_rating,
+            "change": new_winner_rating - old_winner_rating
+        })
+        elo_changes.append({
+            "player": set_loser,
+            "old_rating": old_loser_rating,
+            "new_rating": new_loser_rating,
+            "change": new_loser_rating - old_loser_rating
+        })
 
 
 def main():
@@ -148,6 +159,10 @@ def main():
     output_df = df[desired_columns]
 
     output_df.to_csv(sys.stdout, index=False)
+
+    # Save ELO changes to a file
+    elo_changes_df = pd.DataFrame(elo_changes)
+    elo_changes_df.to_csv("temp-rankings/elo_changes.csv", index=False)
 
 
 if __name__ == "__main__":

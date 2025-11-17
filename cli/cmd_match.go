@@ -164,19 +164,18 @@ func createSinglesIssue(players []string, sets []string, date string) error {
 	ctx := context.Background()
 	client := getGitHubClient()
 
-	// Determine winner (first player listed is winner)
-	winner := players[0]
+	
 
 	title := fmt.Sprintf("Singles Match: %s vs %s (%s)", players[0], players[1], date)
 
-	body := fmt.Sprintf(`**Match Date:** %s
-
-**Players:** %s, %s
-
-**Sets:**
+	body := fmt.Sprintf(`### Match date (YYYY-MM-DD)
 %s
 
-Winner: %s`, date, players[0], players[1], strings.Join(sets, "\n"), winner)
+### Players (winner first, comma-separated @handles)
+%s, %s
+
+### Sets (one line per set, winner’s games first)
+%s`, date, players[0], players[1], strings.Join(sets, "\n"))
 
 	issueRequest := &github.IssueRequest{
 		Title:  &title,
@@ -208,14 +207,14 @@ func createDoublesIssue(teams [][]string, sets []string, date string) error {
 
 	title := fmt.Sprintf("Doubles Match: (%s) vs (%s) (%s)", team1Str, team2Str, date)
 
-	body := fmt.Sprintf(`**Match Date:** %s
-
-**Teams:** %s || %s
-
-**Sets:**
+	body := fmt.Sprintf(`### Match date (YYYY-MM-DD)
 %s
 
-Winners: %s`, date, team1Str, team2Str, strings.Join(sets, "\n"), team1Str)
+### Teams (winner first, comma-separated @handles)
+%s || %s
+
+### Sets (one line per set, winner’s games first)
+%s`, date, team1Str, team2Str, strings.Join(sets, "\n"))
 
 	issueRequest := &github.IssueRequest{
 		Title:  &title,
