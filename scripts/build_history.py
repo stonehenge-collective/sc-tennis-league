@@ -224,6 +224,7 @@ def build_history_page(output_dir: Optional[str] = None):
                 text-align: center;
             }}
             ul {{ margin-bottom: 0; padding-left: 1.5rem; }}
+            td ul li {{ white-space: nowrap; }}
             .table-responsive {{ 
                 max-height: 600px; 
                 overflow-y: auto; 
