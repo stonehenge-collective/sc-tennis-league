@@ -7,7 +7,7 @@ import tempfile
 from typing import Optional
 
 from github_utils import get_repo_owner_and_name_or_default, list_issue_comments
-from scripts.elo_utils import update_elo_ratings, update_doubles_elo_ratings, normalize_team
+from scripts.elo_utils import update_elo_ratings, update_doubles_elo_ratings, normalize_team, normalize_player
 
 # Pre-compiled regex for efficiency
 # Matches " #123" in the bot's comment
@@ -53,6 +53,12 @@ def load_matches_from_directory(directory: str, match_type: str, ratings, team_r
         match_path = os.path.join(directory, match_file)
         with open(match_path, "r") as f:
             match_data = yaml.safe_load(f)
+
+        # Canonicalize handles up front so ELO keys and profile links stay
+        # consistent with the rest of the system (case-insensitive identity).
+        for key in ("players", "team1", "team2"):
+            if key in match_data:
+                match_data[key] = [normalize_player(p) for p in match_data[key]]
 
         issue_search = ISSUE_NUM_RE.search(match_file)
         if not issue_search:

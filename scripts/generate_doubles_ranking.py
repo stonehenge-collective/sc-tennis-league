@@ -2,7 +2,7 @@ import glob
 import sys
 import yaml
 import pandas as pd
-from scripts.elo_utils import update_doubles_elo_ratings, normalize_team
+from scripts.elo_utils import update_doubles_elo_ratings, normalize_team, normalize_player
 
 # --- Team-based data ---
 team_ratings = {}
@@ -35,8 +35,8 @@ def _ensure_player_stats(player: str) -> None:
 
 def apply_match(match):
     """Update ratings and aggregates from a single doubles match file."""
-    team1_players = match["team1"]
-    team2_players = match["team2"]
+    team1_players = [normalize_player(p) for p in match["team1"]]
+    team2_players = [normalize_player(p) for p in match["team2"]]
 
     # Normalize team names for team-based stats
     team1_key = normalize_team(team1_players)

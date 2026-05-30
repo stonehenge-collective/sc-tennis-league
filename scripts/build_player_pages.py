@@ -10,6 +10,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from github_utils import get_repo_owner_and_name_or_default
+from scripts.elo_utils import normalize_player
 
 K = 32
 PLAYER_DATA = {} # {player: {singles: {candlestick: [], scatter: []}, doubles: {candlestick: [], scatter: []}}}
@@ -72,7 +73,7 @@ def calculate_elo_history():
                     daily_elo_changes[p] = {'singles': {'elos': [], 'details': []}, 'doubles': {'elos': [], 'details': []}}
 
             if 'players' in match_data: # Singles match
-                player1, player2 = match_data['players']
+                player1, player2 = (normalize_player(p) for p in match_data['players'])
                 ensure_player_data(player1)
                 ensure_player_data(player2)
 
@@ -106,8 +107,8 @@ def calculate_elo_history():
                     daily_elo_changes[loser]['singles']['details'].append(loser_details)
 
             elif 'team1' in match_data: # Doubles match
-                team1 = match_data['team1']
-                team2 = match_data['team2']
+                team1 = [normalize_player(p) for p in match_data['team1']]
+                team2 = [normalize_player(p) for p in match_data['team2']]
                 all_players = team1 + team2
                 for p in all_players:
                     ensure_player_data(p)
