@@ -18,7 +18,7 @@ def parse_issue_body(body):
     players_match = re.search(r"### Players.*?\n\s*([^\n]+)", body)
     if players_match:
         players_str = players_match.group(1).strip()
-        details["players"] = [p.strip().replace("@", "") for p in players_str.split(",")]
+        details["players"] = [p.strip().replace("@", "").lower() for p in players_str.split(",")]
 
     sets_match = re.search(r"### Sets.*?\n(.*?)(?=\n###|\Z)", body, re.DOTALL)
     if sets_match:

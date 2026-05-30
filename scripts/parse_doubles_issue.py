@@ -20,8 +20,8 @@ def parse_issue_body(body):
         teams_str = teams_match.group(1).strip()
         if "||" in teams_str:
             team1_str, team2_str = teams_str.split("||")
-            team1_players = [p.strip().replace("@", "") for p in team1_str.split(",")]
-            team2_players = [p.strip().replace("@", "") for p in team2_str.split(",")]
+            team1_players = [p.strip().replace("@", "").lower() for p in team1_str.split(",")]
+            team2_players = [p.strip().replace("@", "").lower() for p in team2_str.split(",")]
             details["team1"] = team1_players
             details["team2"] = team2_players
             # Flatten for individual player access

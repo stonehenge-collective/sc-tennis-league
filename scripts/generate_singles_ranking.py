@@ -2,7 +2,7 @@ import glob
 import sys
 import yaml
 import pandas as pd
-from scripts.elo_utils import update_elo_ratings
+from scripts.elo_utils import normalize_player, update_elo_ratings
 
 ratings = {}
 elo_changes = []
@@ -29,7 +29,8 @@ def apply_match(match):
     Elo is applied per set. Each set is an independent event that updates
     the players' ratings based solely on who won the set (score margin ignored).
     """
-    player1, player2 = match["players"]
+    player1 = normalize_player(match["players"][0])
+    player2 = normalize_player(match["players"][1])
 
     # Ensure player entries exist for aggregation
     _ensure_player(player1)

@@ -4,6 +4,16 @@ This module provides shared ELO rating calculation functions.
 
 K = 32
 
+def normalize_player(name):
+    """Canonicalize a player handle for case-insensitive identity.
+
+    GitHub usernames are unique and case-insensitive, so "Johnor12" and
+    "johnor12" are the same account. Lowercasing collapses casing variants
+    to a single player so stats and profile pages don't split. Also strips
+    surrounding whitespace and a leading '@'.
+    """
+    return name.strip().lstrip("@").lower()
+
 def expected(rA, rB):
     """
     Calculate the expected score of player A in a match against player B.
